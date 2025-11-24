@@ -1,5 +1,5 @@
 # Multi-stage build for better security and size optimization
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,15 +40,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Create necessary directories before switching to non-root user
+RUN mkdir -p /app/data /app/tmp /app/logs && \
+    chown -R app:app /app/data /app/tmp /app/logs
+
 # Switch to non-root user
 USER app
 
-# Create necessary directories
-RUN mkdir -p /app/data /app/tmp /app/logs
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || curl -f http://localhost:8000/health || exit 1
+# Health check (simple port check)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import socket; s=socket.socket(); s.connect(('localhost', 8000)); s.close()" || exit 1
 
 # Expose port
 EXPOSE 8000
@@ -56,9 +57,9 @@ EXPOSE 8000
 # Add labels for better metadata
 LABEL org.opencontainers.image.title="Flow2API" \
       org.opencontainers.image.description="OpenAI compatible API for Google VideoFX (Veo)" \
-      org.opencontainers.image.vendor="${VENDOR:-Flow2API Community}" \
+      org.opencontainers.image.vendor="Flow2API Community" \
       org.opencontainers.image.license="MIT" \
-      org.opencontainers.image.version="${VERSION:-latest}" \
+      org.opencontainers.image.version="latest" \
       org.opencontainers.image.source="https://github.com/thesmallhancat/gdtiti_flow2api"
 
 # Run the application
