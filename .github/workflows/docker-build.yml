@@ -9,6 +9,9 @@ on:
     tags:
       - 'v*'
 
+  # PR 触发（构建测试镜像）
+  pull_request:
+
   # 手动触发
   workflow_dispatch:
     inputs:
@@ -57,7 +60,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
-        if: github.event.inputs.push_to_registry != 'false'
+        if: github.event_name != 'pull_request' && github.event.inputs.push_to_registry != 'false'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -74,9 +77,11 @@ jobs:
             type=ref,event=branch,suffix=-{{sha}}                                   # main-<commit_sha>
             type=ref,event=tag                                                        # v1.0.0
             type=raw,value=latest,enable={{is_default_branch}}                       # main分支标记为latest
-            type=raw,suffix=-{{date('YYYY-MM-DD')}}{{sha}}                           # YYYY-MM-DD-<commit_sha>
+            type=raw,value={{date('YYYY-MM-DD')}}-{{sha}}                           # YYYY-MM-DD-<commit_sha>
             # 手动触发时的自定义标签
             type=raw,value=${{ github.event.inputs.tag_name }},enable=${{ github.event.inputs.tag_name != '' }}
+            # 为PR添加预览标签（仅构建不推送）
+            type=raw,value=pr-{{pr_number}},enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -84,7 +89,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }}
-          push: ${{ github.event.inputs.push_to_registry != 'false' }}
+          push: ${{ github.event_name != 'pull_request' && github.event.inputs.push_to_registry != 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

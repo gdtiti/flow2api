@@ -6,6 +6,8 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/fastapi-0.119.0-green.svg)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
+[![CI/CD](https://github.com/thesmallhancat/gdtiti_flow2api/workflows/Build%20and%20Push%20Docker%20Image/badge.svg)](https://github.com/thesmallhancat/gdtiti_flow2api/actions)
+[![Docker Image](https://img.shields.io/badge/docker%20image-latest-blue)](https://github.com/thesmallhancat/gdtiti_flow2api/pkgs/container/gdtiti_flow2api)
 
 **一个功能完整的 OpenAI 兼容 API 服务，为 Flow 提供统一的接口**
 
@@ -31,12 +33,38 @@
 
 ### 方式一：Docker 部署（推荐）
 
-#### 标准模式（不使用代理）
+#### 🐳 使用预构建镜像（GitHub Container Registry）
+
+```bash
+# 拉取最新镜像
+docker pull ghcr.io/thesmallhancat/gdtiti_flow2api:latest
+
+# 运行容器
+docker run -d \
+  --name flow2api \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/thesmallhancat/gdtiti_flow2api:latest
+
+# 带环境变量配置
+docker run -d \
+  --name flow2api \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -e FLOW2API_API_KEY=your-api-key \
+  -e FLOW2API_DEBUG_ENABLED=false \
+  ghcr.io/thesmallhancat/gdtiti_flow2api:latest
+```
+
+#### 📦 使用 Docker Compose
 
 ```bash
 # 克隆项目
-git clone https://github.com/TheSmallHanCat/flow2api.git
-cd sora2api
+git clone https://github.com/TheSmallHanCat/gdtiti_flow2api.git
+cd gdtiti_flow2api
+
+# 更新 docker-compose.yml 使用 GHCR 镜像
+# image: ghcr.io/thesmallhancat/gdtiti_flow2api:latest
 
 # 启动服务
 docker-compose up -d
@@ -45,14 +73,22 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
-#### WARP 模式（使用代理）
+#### 🏗️ 本地构建
 
 ```bash
-# 使用 WARP 代理启动
-docker-compose -f docker-compose.warp.yml up -d
+# 克隆项目
+git clone https://github.com/TheSmallHanCat/gdtiti_flow2api.git
+cd gdtiti_flow2api
 
-# 查看日志
-docker-compose -f docker-compose.warp.yml logs -f
+# 构建镜像
+docker build -t flow2api:latest .
+
+# 运行容器
+docker run -d \
+  --name flow2api \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  flow2api:latest
 ```
 
 ### 方式二：本地部署
