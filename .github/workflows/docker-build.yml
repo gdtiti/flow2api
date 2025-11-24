@@ -77,7 +77,8 @@ jobs:
             type=ref,event=branch,suffix=-{{sha}}                                   # main-<commit_sha>
             type=ref,event=tag                                                        # v1.0.0
             type=raw,value=latest,enable={{is_default_branch}}                       # main分支标记为latest
-            type=raw,value={{date('YYYY-MM-DD')}}-{{sha}}                           # YYYY-MM-DD-<commit_sha>
+            # 使用GitHub run_number作为日期标签的一部分
+            type=raw,value=build-{{run_number}},enable=true                         # build-123
             # 手动触发时的自定义标签
             type=raw,value=${{ github.event.inputs.tag_name }},enable=${{ github.event.inputs.tag_name != '' }}
             # 为PR添加预览标签（仅构建不推送）

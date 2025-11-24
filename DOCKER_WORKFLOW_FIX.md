@@ -12,14 +12,19 @@ Error: Missing value attribute for type=raw,suffix=-{{date('YYYY-MM-DD')}}{{sha}
 
 ### 1. 修复标签语法错误
 
-**修复前：**
+**第一次修复：**
 ```yaml
 type=raw,suffix=-{{date('YYYY-MM-DD')}}{{sha}}  # ❌ 缺少 value 属性
 ```
 
-**修复后：**
+**第二次修复：**
 ```yaml
-type=raw,value={{date('YYYY-MM-DD')}}-{{sha}}  # ✅ 正确的语法
+type=raw,value={{date('YYYY-MM-DD')}}-{{sha}}  # ❌ date函数不被支持
+```
+
+**最终修复：**
+```yaml
+type=raw,value=build-{{run_number}}  # ✅ 使用工作流运行号
 ```
 
 ### 2. 增强触发机制
@@ -46,8 +51,8 @@ if: github.event_name != 'pull_request' && github.event.inputs.push_to_registry 
 
 | 触发类型 | 生成的标签 | 是否推送 | 说明 |
 |---------|-----------|---------|------|
-| **main/master 分支推送** | `main-<commit_sha>`, `latest`, `YYYY-MM-DD-<commit_sha>` | ✅ | 生产版本 |
-| **标签推送 (v1.0.0)** | `v1.0.0`, `YYYY-MM-DD-<commit_sha>` | ✅ | 版本发布 |
+| **main/master 分支推送** | `main-<commit_sha>`, `latest`, `build-<run_number>` | ✅ | 生产版本 |
+| **标签推送 (v1.0.0)** | `v1.0.0`, `build-<run_number>` | ✅ | 版本发布 |
 | **Pull Request** | `pr-<pr_number>` | ❌ | 仅构建测试 |
 | **手动触发** | `<custom_tag>`, `<branch>-<custom_tag>`, `latest`(main分支) | ✅ | 自定义构建 |
 
@@ -57,11 +62,11 @@ if: github.event_name != 'pull_request' && github.event.inputs.push_to_registry 
 # 推送到 main 分支
 ghcr.io/thesmallhancat/gdtiti_flow2api:main-abc1234
 ghcr.io/thesmallhancat/gdtiti_flow2api:latest
-ghcr.io/thesmallhancat/gdtiti_flow2api:2024-01-15-abc1234
+ghcr.io/thesmallhancat/gdtiti_flow2api:build-123
 
 # 推送标签 v1.0.0
 ghcr.io/thesmallhancat/gdtiti_flow2api:v1.0.0
-ghcr.io/thesmallhancat/gdtiti_flow2api:2024-01-15-abc1234
+ghcr.io/thesmallhancat/gdtiti_flow2api:build-123
 
 # Pull Request #123
 ghcr.io/thesmallhancat/gdtiti_flow2api:pr-123  # 仅构建，不推送
@@ -109,7 +114,7 @@ tags: |
   type=ref,event=branch,suffix=-{{sha}}                     # ✅
   type=ref,event=tag                                        # ✅
   type=raw,value=latest,enable={{is_default_branch}}        # ✅
-  type=raw,value={{date('YYYY-MM-DD')}}-{{sha}}            # ✅
+  type=raw,value=build-{{run_number}}                       # ✅
   type=raw,value=${{ github.event.inputs.tag_name }},enable=${{ github.event.inputs.tag_name != '' }}  # ✅
   type=raw,value=pr-{{pr_number}},enable=${{ github.event_name == 'pull_request' }}  # ✅
 ```
@@ -148,3 +153,18 @@ docker run --rm -p 8000:8000 flow2api:test
 4. **错误处理**：更完善的条件判断和错误预防
 
 这个修复确保了 Docker CI/CD 流程的稳定性和灵活性，支持各种开发场景需求。
+
+## 📝 重要说明
+
+**为什么使用 `build-{{run_number}}` 而不是日期：**
+1. **兼容性**：`{{date()}}` 函数在 `docker/metadata-action@v5` 中不被支持
+2. **唯一性**：GitHub Actions 的 `run_number` 是唯一的递增数字
+3. **可追踪性**：每个构建都有一个明确的编号，便于追踪和回滚
+4. **简洁性**：`build-123` 比 `2024-01-15-abc1234` 更简洁易读
+
+**��签示例更新：**
+- `main-abc1234` - 基于分支名和提交哈希
+- `latest` - 最新版本（仅主分支）
+- `build-456` - 基于工作流运行号
+- `v1.0.0` - 版本标签
+- `pr-789` - Pull Request 标签（仅构建，不推送）
